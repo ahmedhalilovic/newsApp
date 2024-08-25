@@ -11,7 +11,7 @@ class NewsTableViewCellViewModel {
     let title: String
     let subtitles: String
     let imageURL: URL?
-    let imageData: Data? = nil
+    var imageData: Data? = nil
     
     init(title: String, subtitles: String, imageURL: URL?) {
         self.title = title
@@ -26,6 +26,7 @@ class NewsTableViewCell: UITableViewCell {
     // Creates and configures a label for displaying a title.
     private let newsTitleLabel: UILabel = {
         let label = UILabel()
+        label.numberOfLines = 0
         label.font = .systemFont(ofSize: 25, weight: .medium)
         return label
     }()
@@ -40,7 +41,8 @@ class NewsTableViewCell: UITableViewCell {
     // Creates and configures an image view with a red background and scale-to-fill content mode.
     private let newsImageView: UIImageView = {
        let imageView = UIImageView()
-        imageView.backgroundColor = .systemRed
+        imageView.clipsToBounds = true
+        imageView.backgroundColor = .secondarySystemBackground
         imageView.contentMode = .scaleToFill
         return imageView
     }()
@@ -63,13 +65,26 @@ class NewsTableViewCell: UITableViewCell {
         
         newsTitleLabel.frame = CGRect(x: 10,
                                       y: 0,
-                                      width: contentView.frame.size.width - 120,
+                                      width: contentView.frame.size.width - 170,
+                                      height: 70)
+        
+        newsSubtitleLabel.frame = CGRect(x: 10,
+                                      y: 70,
+                                      width: contentView.frame.size.width - 170,
                                       height: contentView.frame.size.height/2)
+        
+        newsImageView.frame = CGRect(x: contentView.frame.size.width - 150,
+                                      y: 5,
+                                      width: 160,
+                                      height: contentView.frame.size.height - 10)
     }
-    
+
     // Resets the cell's properties before it is reused.
     override func prepareForReuse() {
         super.prepareForReuse()
+        newsTitleLabel.text = nil
+        newsSubtitleLabel.text = nil
+        newsImageView.image = nil
     }
     
     func configure(with viewModel: NewsTableViewCellViewModel) {
@@ -79,8 +94,17 @@ class NewsTableViewCell: UITableViewCell {
         // Image
         if let data = viewModel.imageData {
             newsImageView.image = UIImage(data: data)
-        } else {
-            //fetch
+        } else if let url = viewModel.imageURL {
+            // Fetchs images
+            URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+                guard let data = data, error == nil else {
+                    return
+                }
+                viewModel.imageData = data
+                DispatchQueue.main.async {
+                    self?.newsImageView.image = UIImage(data: data)
+                }
+            }.resume()
         }
     }
 
